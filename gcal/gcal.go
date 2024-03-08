@@ -145,7 +145,7 @@ func icalEventToGcalEvent(event *ical.VEvent) *calendar.Event {
 	eventSummary := event.GetProperty(ical.ComponentPropertySummary).Value
 	startTime, startTimeErr := event.GetStartAt()
 	endTime, endTimeErr := event.GetEndAt()
-	if startTimeErr != nil || endTimeErr != nil {
+	if startTimeErr != nil || endTimeErr != nil || startTime.Equal(endTime) {
 		return nil
 	}
 
