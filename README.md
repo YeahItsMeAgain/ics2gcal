@@ -1,3 +1,5 @@
+# ICS To Google Calendar
+Just another ics to gcal project, this one is very minimal and supports only what i need.
 
 # Configuration
 
