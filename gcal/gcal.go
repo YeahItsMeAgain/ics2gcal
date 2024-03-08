@@ -158,7 +158,7 @@ func icalEventToGcalEvent(event *ical.VEvent) *calendar.Event {
 		End: &calendar.EventDateTime{
 			DateTime: endTime.Format(time.RFC3339),
 		},
-		Description: event.GetProperty(ical.ComponentPropertyDescription).Value,
+		Description: ical.FromText(event.GetProperty(ical.ComponentPropertyDescription).Value),
 		Id:          icalIdToGcalId(event.GetProperty(ical.ComponentPropertyUniqueId).Value),
 		Reminders: &calendar.EventReminders{
 			Overrides:       reminders,
