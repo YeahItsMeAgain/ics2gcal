@@ -16,15 +16,7 @@ func main() {
 	logger.Logger.Info("Initializing config")
 	config.Init()
 
-	// Fetching the iCalendar file
-	resp, err := ics.FetchWebcal(config.Config.WebcalURL)
-	if err != nil {
-		log.Fatalf("Failed to fetch iCalendar file: %v", err)
-	}
-	defer resp.Body.Close()
-
-	// Parsing the iCalendar data
-	events, err := ics.ParseICS(resp.Body)
+	events, err := ics.ParseFromWebcal(config.Config.WebcalURL)
 	if err != nil {
 		log.Fatalf("Failed to parse iCalendar data: %v", err)
 	}

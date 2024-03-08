@@ -1,7 +1,7 @@
 package ics
 
 import (
-	"io"
+	"ics2gcal/logger"
 
 	"net/http"
 	"strings"
@@ -9,7 +9,7 @@ import (
 	ical "github.com/arran4/golang-ical"
 )
 
-func FetchWebcal(webcalURL string) (*http.Response, error) {
+func fetchWebcal(webcalURL string) (*http.Response, error) {
 	// Replace webcal:// with https:// to follow the redirect
 	url := strings.Replace(webcalURL, "webcal://", "https://", 1)
 	resp, err := http.Get(url)
@@ -20,7 +20,7 @@ func FetchWebcal(webcalURL string) (*http.Response, error) {
 	// And follow the redirect recursively.
 	if isRedirect(resp.StatusCode) {
 		location := resp.Header.Get("Location")
-		return FetchWebcal(location)
+		return fetchWebcal(location)
 	}
 	return resp, nil
 }
@@ -33,8 +33,14 @@ func isRedirect(statusCode int) bool {
 	return false
 }
 
-func ParseICS(data io.Reader) ([]*ical.VEvent, error) {
-	calendar, err := ical.ParseCalendar(data)
+func ParseFromWebcal(webcalURL string) ([]*ical.VEvent, error) {
+	resp, err := fetchWebcal(webcalURL)
+	if err != nil {
+		logger.Logger.Fatalf("Failed to fetch iCalendar file: %v", err)
+	}
+	defer resp.Body.Close()
+
+	calendar, err := ical.ParseCalendar(resp.Body)
 	if err != nil {
 		return nil, err
 	}
