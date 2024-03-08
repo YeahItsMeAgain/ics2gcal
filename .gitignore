@@ -57,5 +57,4 @@ go.work
 
 config.json
 main
-credentials.json
-TODO.md
+token.json
