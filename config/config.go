@@ -9,6 +9,7 @@ import (
 type ConfigT struct {
 	WebcalURL string
 	CalendarId string
+	UpdateIntervalMins  int
 	Google struct {
 		ClientID     string   `json:"client_id"`
 		ClientSecret string   `json:"client_secret"`

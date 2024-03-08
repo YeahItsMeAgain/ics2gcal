@@ -189,5 +189,4 @@ func PushIcalEventsToGcal(calendarSrv *calendar.Service, events []*ical.VEvent) 
 			}
 		}
 	}
-	logger.Logger.Info("Finished updating events")
 }

@@ -1,6 +1,7 @@
 {
     "WebcalURL": "webcal://XXXXXXXXX/.ics",
     "CalendarId": "XXXXXXXXX",  // Get it from calendar.google.com.
+    "UpdateIntervalMins": 10,
     "Google": {  // Directly from google credentials.json.
         "client_id": "XXXXXXXXX",
         "client_secret": "XXXXXXXXX",
