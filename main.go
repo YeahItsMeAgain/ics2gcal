@@ -15,12 +15,14 @@ func main() {
 	config.Init()
 
 	logger.Logger.Info("Connecting to google calendar service")
-	calendarSrv := gcal.GetCalendarSrv()
+	calendarSrv := gcal.Init()
 
+	logger.Logger.Info("Fetching events from webcal")
 	events, err := ics.ParseFromWebcal(config.Config.WebcalURL)
 	if err != nil {
 		log.Fatalf("Failed to parse iCalendar data: %v", err)
 	}
 
+	logger.Logger.Info("Updating google calendar")
 	gcal.IcalEventsToGcal(calendarSrv, events)
 }
