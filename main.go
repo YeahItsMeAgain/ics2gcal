@@ -5,12 +5,24 @@ import (
 	"ics2gcal/gcal"
 	"ics2gcal/ics"
 	"ics2gcal/logger"
+	"ics2gcal/updater"
 	"log"
+	"os"
 	"time"
 )
 
 func main() {
 	logger.Init()
+
+	if len(os.Args) > 1 {
+		switch os.Args[1] {
+		case "update":
+			if err := updater.SelfUpdate(); err != nil {
+				logger.Logger.Fatal(err)
+			}
+		}
+		return
+	}
 
 	logger.Logger.Info("Initializing config")
 	config.Init()
