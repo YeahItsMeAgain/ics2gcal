@@ -1,6 +1,6 @@
 {
     "WebcalURL": "webcal://XXXXXXXXX/.ics",
-    "CalendarName": "Webcal Calendar - Sync",
+    "CalendarId": "XXXXXXXXX",  // Get it from calendar.google.com.
     "Google": {  // Directly from google credentials.json.
         "client_id": "XXXXXXXXX",
         "client_secret": "XXXXXXXXX",
