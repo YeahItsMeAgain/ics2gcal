@@ -1,13 +1,11 @@
 package main
 
 import (
-	"fmt"
 	"ics2gcal/config"
+	"ics2gcal/gcal"
 	"ics2gcal/ics"
 	"ics2gcal/logger"
 	"log"
-
-	ical "github.com/arran4/golang-ical"
 )
 
 func main() {
@@ -16,14 +14,13 @@ func main() {
 	logger.Logger.Info("Initializing config")
 	config.Init()
 
+	logger.Logger.Info("Connecting to google calendar service")
+	calendarSrv := gcal.GetCalendarSrv()
+
 	events, err := ics.ParseFromWebcal(config.Config.WebcalURL)
 	if err != nil {
 		log.Fatalf("Failed to parse iCalendar data: %v", err)
 	}
 
-	// Printing parsed events
-	for _, event := range events {
-		fmt.Printf("Event: %s\n", event.GetProperty(ical.ComponentPropertySummary).Value)
-		fmt.Println("----------")
-	}
+	gcal.IcalEventsToGcal(calendarSrv, events)
 }
