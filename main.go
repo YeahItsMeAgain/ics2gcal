@@ -24,5 +24,5 @@ func main() {
 	}
 
 	logger.Logger.Info("Updating google calendar")
-	gcal.IcalEventsToGcal(calendarSrv, events)
+	gcal.PushIcalEventsToGcal(calendarSrv, events)
 }

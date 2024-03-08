@@ -11,6 +11,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	ical "github.com/arran4/golang-ical"
@@ -76,13 +77,13 @@ func saveToken(path string, token *oauth2.Token) {
 	json.NewEncoder(f).Encode(token)
 }
 
-func Init() *calendar.Service{
+func Init() *calendar.Service {
 	ctx := context.Background()
 	config := &oauth2.Config{
 		ClientID:     config.Config.Google.ClientID,
 		ClientSecret: config.Config.Google.ClientSecret,
 		RedirectURL:  config.Config.Google.RedirectURIs[0],
-		Scopes:       []string{
+		Scopes: []string{
 			calendar.CalendarScope,
 			calendar.CalendarEventsScope,
 			calendar.CalendarEventsReadonlyScope,
@@ -108,39 +109,82 @@ func icalIdToGcalId(icalId string) string {
 	return hex.EncodeToString(idMd5[:])
 }
 
-func IcalEventsToGcal(calendarSrv *calendar.Service, events []*ical.VEvent) {
-	for _, event := range events {
-		eventSummary := event.GetProperty(ical.ComponentPropertySummary).Value
-		startTime, startTimeErr := event.GetStartAt()
-		endTime, endTimeErr := event.GetEndAt()
-		if startTimeErr != nil || endTimeErr != nil {
-			continue
+func valarmTriggerToMinutes(valarmTrigger string) int64 {
+	valarmTrigger = strings.ToLower(valarmTrigger)
+	if strings.HasPrefix(valarmTrigger, "pt") {
+		d, err := time.ParseDuration(valarmTrigger[2:])
+		if err == nil {
+			return int64(d.Minutes())
 		}
+	} else if strings.HasPrefix(valarmTrigger, "-pt") {
+		d, err := time.ParseDuration(valarmTrigger[3:])
+		if err == nil {
+			return int64(d.Minutes())
+		}
+	}
+	return 0
+}
 
-		// TODO: reminders
-		// TODO: periodic updates
-		gevent := &calendar.Event{
-			Summary: eventSummary,
-			Start: &calendar.EventDateTime{
-				DateTime: startTime.Format(time.RFC3339),
+func icalEventToGcalEvent(event *ical.VEvent) *calendar.Event {
+	eventSummary := event.GetProperty(ical.ComponentPropertySummary).Value
+	startTime, startTimeErr := event.GetStartAt()
+	endTime, endTimeErr := event.GetEndAt()
+	if startTimeErr != nil || endTimeErr != nil {
+		return nil
+	}
+
+	// Parsing ICS "VALARM" to google calendar "Minutes".
+	reminderMinutes := map[int64]bool{0: true, 30: true}
+	for _, alarm := range event.Alarms() {
+		reminderMinutes[valarmTriggerToMinutes(alarm.GetProperty(ical.ComponentPropertyTrigger).Value)] = true
+	}
+
+	var reminders []*calendar.EventReminder
+	for minutes, _ := range reminderMinutes {
+		reminders = append(reminders,
+			&calendar.EventReminder{
+				Method:          "popup",
+				Minutes:         int64(minutes),
+				ForceSendFields: []string{"Minutes"},
 			},
-			End: &calendar.EventDateTime{
-				DateTime: endTime.Format(time.RFC3339),
-			},
-			Description: event.GetProperty(ical.ComponentPropertyDescription).Value,
-			Id:          icalIdToGcalId(event.GetProperty(ical.ComponentPropertyUniqueId).Value),
+		)
+	}
+
+	return &calendar.Event{
+		Summary: eventSummary,
+		Start: &calendar.EventDateTime{
+			DateTime: startTime.Format(time.RFC3339),
+		},
+		End: &calendar.EventDateTime{
+			DateTime: endTime.Format(time.RFC3339),
+		},
+		Description: event.GetProperty(ical.ComponentPropertyDescription).Value,
+		Id:          icalIdToGcalId(event.GetProperty(ical.ComponentPropertyUniqueId).Value),
+		Reminders: &calendar.EventReminders{
+			Overrides:       reminders,
+			UseDefault:      false,
+			ForceSendFields: []string{"UseDefault", "Overrides"},
+		},
+	}
+}
+
+func PushIcalEventsToGcal(calendarSrv *calendar.Service, events []*ical.VEvent) {
+	for _, event := range events {
+		gevent := icalEventToGcalEvent(event)
+		if gevent == nil {
+			continue
 		}
 
 		_, err := calendarSrv.Events.Insert(config.Config.CalendarId, gevent).Do()
 		if err != nil {
-			if err.(*googleapi.Error).Code == 409 {    // Already Exists.
+			if err.(*googleapi.Error).Code == 409 { // Already Exists.
 				_, err := calendarSrv.Events.Update(config.Config.CalendarId, gevent.Id, gevent).Do()
 				if err != nil {
-					logger.Logger.Errorf("Unable to update event: %s. %v\n", eventSummary, err)
+					logger.Logger.Errorf("Unable to update event: %s. %v\n", gevent.Summary, err)
 					continue
 				}
 			} else {
-				logger.Logger.Errorf("Unable to create event: %s. %v\n", eventSummary, err)
+				logger.Logger.Errorf("Unable to create event: %s. %v\n", gevent.Summary, err)
 				continue
 			}
 		}
