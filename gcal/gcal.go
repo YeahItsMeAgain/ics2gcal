@@ -125,6 +125,22 @@ func valarmTriggerToMinutes(valarmTrigger string) int64 {
 	return 0
 }
 
+func getRecurrenceRules(event *ical.VEvent) string {
+	rrule := ""
+
+	// Adding recurrence rules if they exist.
+	recurrenceRule := event.GetProperty(ical.ComponentPropertyRrule)
+	if recurrenceRule != nil {
+		rrule = strings.ReplaceAll(recurrenceRule.Value, "WKST=SU", "")
+		rrule = strings.ReplaceAll(rrule, ";;", ";")
+	}
+
+	if rrule != "" {
+		rrule = "RRULE:" + rrule
+	}
+	return rrule
+}
+
 func icalEventToGcalEvent(event *ical.VEvent) *calendar.Event {
 	eventSummary := event.GetProperty(ical.ComponentPropertySummary).Value
 	startTime, startTimeErr := event.GetStartAt()
@@ -150,13 +166,16 @@ func icalEventToGcalEvent(event *ical.VEvent) *calendar.Event {
 		)
 	}
 
-	return &calendar.Event{
+	timezone := event.GetProperty(ical.ComponentPropertyTzid).Value
+	gevent := &calendar.Event{
 		Summary: eventSummary,
 		Start: &calendar.EventDateTime{
 			DateTime: startTime.Format(time.RFC3339),
+			TimeZone: timezone,
 		},
 		End: &calendar.EventDateTime{
 			DateTime: endTime.Format(time.RFC3339),
+			TimeZone: timezone,
 		},
 		Description: ical.FromText(event.GetProperty(ical.ComponentPropertyDescription).Value),
 		Id:          icalIdToGcalId(event.GetProperty(ical.ComponentPropertyUniqueId).Value),
@@ -166,6 +185,13 @@ func icalEventToGcalEvent(event *ical.VEvent) *calendar.Event {
 			ForceSendFields: []string{"UseDefault", "Overrides"},
 		},
 	}
+
+	// Adding recurrence rules if they exist.
+	recurrenceRule := getRecurrenceRules(event)
+	if recurrenceRule != "" {
+		gevent.Recurrence = []string{recurrenceRule}
+	}
+	return gevent
 }
 
 func PushIcalEventsToGcal(calendarSrv *calendar.Service, events []*ical.VEvent) {
