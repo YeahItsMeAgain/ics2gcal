@@ -202,17 +202,21 @@ func PushIcalEventsToGcal(calendarSrv *calendar.Service, events []*ical.VEvent) 
 		}
 
 		_, err := calendarSrv.Events.Insert(config.Config.CalendarId, gevent).Do()
-		if err != nil {
-			if err.(*googleapi.Error).Code == 409 { // Already Exists.
+		if err == nil {
+			continue
+		}
+
+		if e, ok := err.(*googleapi.Error); ok {
+			if e.Code == 409 { // Already Exists.
 				_, err := calendarSrv.Events.Update(config.Config.CalendarId, gevent.Id, gevent).Do()
 				if err != nil {
 					logger.Logger.Errorf("Unable to update event: %s. %v\n", gevent.Summary, err)
 					continue
 				}
-			} else {
-				logger.Logger.Errorf("Unable to create event: %s. %v\n", gevent.Summary, err)
-				continue
 			}
+		} else {
+			logger.Logger.Errorf("Unable to create event: %s. %v\n", gevent.Summary, err)
+			continue
 		}
 	}
 }
