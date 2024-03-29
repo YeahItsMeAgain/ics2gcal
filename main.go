@@ -28,7 +28,6 @@ func main() {
 	config.Init()
 
 	logger.Logger.Info("Connecting to google calendar service")
-	calendarSrv := gcal.Init()
 
 	ticker := time.NewTicker(time.Duration(config.Config.UpdateIntervalMins) * time.Minute)
 	for {
@@ -38,6 +37,9 @@ func main() {
 			log.Fatalf("Failed to parse iCalendar data: %v", err)
 		}
 		
+		logger.Logger.Info("Getting google calendar client")
+		calendarSrv := gcal.GetClient()
+
 		logger.Logger.Info("Updating google calendar")
 		gcal.PushIcalEventsToGcal(calendarSrv, events)
 

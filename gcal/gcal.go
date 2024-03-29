@@ -32,6 +32,16 @@ func getClient(config *oauth2.Config) *http.Client {
 	if err != nil {
 		tok = getTokenFromWeb(config)
 		saveToken(tokFile, tok)
+	} else if !tok.Valid() {  // We need to refresh the token.
+		tokenSource := config.TokenSource(context.Background(), tok)
+		newTok, err := tokenSource.Token()
+		if err == nil {
+			tok = newTok
+		} else {
+			// Refresh token might be expired, get a new token from web.
+			tok = getTokenFromWeb(config)
+			saveToken(tokFile, tok)
+		}
 	}
 	return config.Client(context.Background(), tok)
 }
@@ -77,7 +87,7 @@ func saveToken(path string, token *oauth2.Token) {
 	json.NewEncoder(f).Encode(token)
 }
 
-func Init() *calendar.Service {
+func GetClient() *calendar.Service {
 	ctx := context.Background()
 	config := &oauth2.Config{
 		ClientID:     config.Config.Google.ClientID,
@@ -104,6 +114,7 @@ func Init() *calendar.Service {
 	return srv
 
 }
+
 func icalIdToGcalId(icalId string) string {
 	idMd5 := md5.Sum([]byte(icalId))
 	return hex.EncodeToString(idMd5[:])
